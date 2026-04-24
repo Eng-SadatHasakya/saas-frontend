@@ -42,3 +42,15 @@ export async function getSubscription(token) {
   });
   return res.json();
 }
+
+export async function queryAI(query, token) {
+  const res = await fetch(`${API_URL}/ai/query`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ query }),
+  });
+  return res.json();
+}

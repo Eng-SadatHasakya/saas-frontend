@@ -72,10 +72,10 @@ export default function Dashboard() {
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
           <h2 className="font-bold text-lg mb-4">Quick Actions</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <a href="/chat" className="bg-indigo-700 hover:bg-indigo-600 border border-indigo-600 rounded-lg px-4 py-3 text-sm text-center">AI Assistant</a>
             <a href="http://localhost:8000/docs" target="_blank" rel="noreferrer" className="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg px-4 py-3 text-sm text-center">API Docs</a>
             <a href="#" className="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg px-4 py-3 text-sm text-center">Invite Member</a>
             <a href="#" className="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg px-4 py-3 text-sm text-center">Manage Keys</a>
-            <a href="#" className="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg px-4 py-3 text-sm text-center">Upgrade Plan</a>
           </div>
         </div>
       </div>

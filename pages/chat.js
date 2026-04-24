@@ -1,0 +1,161 @@
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/router";
+import Link from "next/link";
+import { queryAI } from "../utils/api";
+
+export default function Chat() {
+  const router = useRouter();
+  const [messages, setMessages] = useState([
+    {
+      role: "assistant",
+      content: "Hello! I am your AI assistant. Ask me anything about your organization.",
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [token, setToken] = useState(null);
+  const bottomRef = useRef(null);
+
+  useEffect(() => {
+    const t = localStorage.getItem("access_token");
+    if (!t) {
+      router.push("/login");
+      return;
+    }
+    setToken(t);
+  }, []);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSend = async () => {
+    if (!input.trim() || loading) return;
+
+    const userMessage = { role: "user", content: input };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setLoading(true);
+
+    const res = await queryAI(input, token);
+
+    const aiMessage = {
+      role: "assistant",
+      content: res.response || "Sorry, I could not process that.",
+    };
+
+    setMessages((prev) => [...prev, aiMessage]);
+    setLoading(false);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const suggestedQueries = [
+    "How many users are in my organization?",
+    "What is my current subscription plan?",
+    "Summarize my organization",
+    "Who are the admins?",
+  ];
+
+  return (
+    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
+      {/* Navbar */}
+      <nav className="flex justify-between items-center px-8 py-5 border-b border-gray-800">
+        <div className="text-xl font-bold text-indigo-400">AI Assistant</div>
+        <div className="flex items-center gap-4">
+          <Link href="/dashboard" className="text-gray-400 hover:text-white text-sm transition">
+            Back to Dashboard
+          </Link>
+        </div>
+      </nav>
+
+      {/* Chat Container */}
+      <div className="flex-1 max-w-3xl w-full mx-auto px-4 py-6 flex flex-col">
+
+        {/* Suggested Queries */}
+        {messages.length === 1 && (
+          <div className="mb-6">
+            <p className="text-gray-400 text-sm mb-3">Suggested questions:</p>
+            <div className="grid grid-cols-2 gap-2">
+              {suggestedQueries.map((q) => (
+                <button
+                  key={q}
+                  onClick={() => setInput(q)}
+                  className="bg-gray-900 border border-gray-700 hover:border-indigo-600 rounded-lg px-4 py-3 text-sm text-left text-gray-300 transition"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Messages */}
+        <div className="flex-1 space-y-4 mb-4">
+          {messages.map((msg, i) => (
+            <div
+              key={i}
+              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+            >
+              <div
+                className={`max-w-xl px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                  msg.role === "user"
+                    ? "bg-indigo-600 text-white rounded-br-sm"
+                    : "bg-gray-800 text-gray-100 rounded-bl-sm"
+                }`}
+              >
+                {msg.role === "assistant" && (
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-indigo-400 text-xs font-bold">AI</span>
+                  </div>
+                )}
+                {msg.content}
+              </div>
+            </div>
+          ))}
+
+          {/* Loading indicator */}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="bg-gray-800 px-4 py-3 rounded-2xl rounded-bl-sm">
+                <div className="flex gap-1 items-center">
+                  <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
+                  <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
+                  <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+
+        {/* Input */}
+        <div className="flex gap-3 items-end">
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask anything about your organization..."
+            rows={1}
+            className="flex-1 bg-gray-800 border border-gray-700 focus:border-indigo-500 rounded-xl px-4 py-3 text-white text-sm resize-none focus:outline-none"
+          />
+          <button
+            onClick={handleSend}
+            disabled={loading || !input.trim()}
+            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 px-5 py-3 rounded-xl text-sm font-medium transition"
+          >
+            Send
+          </button>
+        </div>
+        <p className="text-gray-600 text-xs text-center mt-2">
+          Press Enter to send · Shift+Enter for new line
+        </p>
+      </div>
+    </div>
+  );
+}
