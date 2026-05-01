@@ -54,3 +54,25 @@ export async function queryAI(query, token) {
   });
   return res.json();
 }
+
+export async function getNotifications(token) {
+  const res = await fetch(`${API_URL}/notifications/`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json();
+}
+
+export async function markNotificationsRead(token) {
+  const res = await fetch(`${API_URL}/notifications/read-all`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json();
+}
+
+export async function getUnreadCount(token) {
+  const res = await fetch(`${API_URL}/notifications/unread-count`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json();
+}

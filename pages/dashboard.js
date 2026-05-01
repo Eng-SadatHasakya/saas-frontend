@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { getMe, getMyOrg, getSubscription } from "../utils/api";
+import { getMe, getMyOrg, getSubscription, getNotifications, getUnreadCount, markNotificationsRead } from "../utils/api";
 import { connectWebSocket, disconnectWebSocket } from "../utils/websocket";
 
 export default function Dashboard() {
@@ -17,33 +17,38 @@ export default function Dashboard() {
     if (!token) { router.push("/login"); return; }
 
     async function loadData() {
-      const [userData, orgData, subData] = await Promise.all([
-        getMe(token), getMyOrg(token), getSubscription(token),
+      const [userData, orgData, subData, notifData] = await Promise.all([
+        getMe(token),
+        getMyOrg(token),
+        getSubscription(token),
+        getNotifications(token),
       ]);
+
       if (userData.detail === "Invalid token") {
         localStorage.removeItem("access_token");
         router.push("/login");
         return;
       }
+
       setUser(userData);
       setOrg(orgData);
       setSub(subData);
+      setNotifications(notifData);
       setLoading(false);
 
-      // ✅ Connect WebSocket
       connectWebSocket(token, (event) => {
         if (event.type !== "NOTIFICATION") {
           setNotifications((prev) => [
             {
               id: Date.now(),
               message: event.data.message,
-              type: event.type,
-              time: new Date().toLocaleTimeString(),
+              event_type: event.type,
+              is_read: false,
+              created_at: new Date().toISOString(),
             },
-            ...prev.slice(0, 9), // keep last 10
+            ...prev.slice(0, 9),
           ]);
         }
-        // Update subscription plan in real time
         if (event.type === "SUBSCRIPTION_UPDATED") {
           setSub((prev) => ({ ...prev, plan: event.data.message.split(" ")[3] }));
         }
@@ -51,7 +56,6 @@ export default function Dashboard() {
     }
 
     loadData();
-
     return () => disconnectWebSocket();
   }, []);
 
@@ -61,6 +65,14 @@ export default function Dashboard() {
     localStorage.removeItem("refresh_token");
     router.push("/login");
   };
+
+  const handleMarkRead = async () => {
+    const token = localStorage.getItem("access_token");
+    await markNotificationsRead(token);
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+  };
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   if (loading) {
     return (
@@ -77,40 +89,37 @@ export default function Dashboard() {
         <div className="flex items-center gap-4">
           <span className="text-gray-400 text-sm">{user?.email}</span>
 
-          {/* 🔔 Notification Bell */}
           <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
               className="relative border border-gray-700 px-3 py-2 rounded-lg text-sm hover:border-gray-500 transition"
             >
               🔔
-              {notifications.length > 0 && (
+              {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
-                  {notifications.length}
+                  {unreadCount}
                 </span>
               )}
             </button>
 
-            {/* Notification Dropdown */}
             {showNotifications && (
               <div className="absolute right-0 mt-2 w-80 bg-gray-900 border border-gray-700 rounded-xl shadow-xl z-50">
                 <div className="flex justify-between items-center px-4 py-3 border-b border-gray-700">
                   <span className="font-bold text-sm">Notifications</span>
-                  <button
-                    onClick={() => setNotifications([])}
-                    className="text-gray-400 hover:text-white text-xs"
-                  >
-                    Clear all
+                  <button onClick={handleMarkRead} className="text-gray-400 hover:text-white text-xs">
+                    Mark all read
                   </button>
                 </div>
                 {notifications.length === 0 ? (
                   <p className="text-gray-400 text-sm text-center py-6">No notifications yet</p>
                 ) : (
                   <div className="max-h-64 overflow-y-auto">
-                    {notifications.map((n) => (
-                      <div key={n.id} className="px-4 py-3 border-b border-gray-800 hover:bg-gray-800">
+                    {notifications.map((n, i) => (
+                      <div key={n.id || i} className={`px-4 py-3 border-b border-gray-800 ${!n.is_read ? "bg-gray-800" : ""}`}>
                         <p className="text-sm text-white">{n.message}</p>
-                        <p className="text-xs text-gray-400 mt-1">{n.time}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {new Date(n.created_at).toLocaleTimeString()}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -119,10 +128,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          <button
-            onClick={handleLogout}
-            className="border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg text-sm transition"
-          >
+          <button onClick={handleLogout} className="border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg text-sm transition">
             Logout
           </button>
         </div>
@@ -147,16 +153,17 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Live Activity Feed */}
-        {notifications.length > 0 && (
+        {notifications.filter(n => !n.is_read).length > 0 && (
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
             <h2 className="font-bold text-lg mb-4">Live Activity</h2>
             <div className="space-y-2">
-              {notifications.slice(0, 3).map((n) => (
-                <div key={n.id} className="flex items-center gap-3 text-sm">
+              {notifications.filter(n => !n.is_read).slice(0, 3).map((n, i) => (
+                <div key={n.id || i} className="flex items-center gap-3 text-sm">
                   <span className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></span>
                   <span className="text-gray-300">{n.message}</span>
-                  <span className="text-gray-500 text-xs ml-auto">{n.time}</span>
+                  <span className="text-gray-500 text-xs ml-auto">
+                    {new Date(n.created_at).toLocaleTimeString()}
+                  </span>
                 </div>
               ))}
             </div>
