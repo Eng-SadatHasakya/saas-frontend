@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { queryAI } from "../utils/api";
 
 export default function Chat() {
   const router = useRouter();
@@ -13,39 +12,59 @@ export default function Chat() {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [token, setToken] = useState(null);
+  const [connected, setConnected] = useState(false);
   const bottomRef = useRef(null);
+  const wsRef = useRef(null);
 
   useEffect(() => {
-    const t = localStorage.getItem("access_token");
-    if (!t) {
-      router.push("/login");
-      return;
-    }
-    setToken(t);
+    const token = localStorage.getItem("access_token");
+    if (!token) { router.push("/login"); return; }
+
+    // ✅ Connect WebSocket
+    const ws = new WebSocket(`ws://localhost:8000/ws?token=${token}`);
+    wsRef.current = ws;
+
+    ws.onopen = () => setConnected(true);
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.type === "AI_THINKING") {
+        setLoading(true);
+      }
+
+      if (data.type === "AI_RESPONSE_READY") {
+        setLoading(false);
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: data.data.response
+        }]);
+      }
+    };
+
+    ws.onclose = () => setConnected(false);
+
+    return () => ws.close();
   }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSend = async () => {
+  const handleSend = () => {
     if (!input.trim() || loading) return;
 
-    const userMessage = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => [...prev, { role: "user", content: input }]);
+
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: "ai_query",
+        content: input
+      }));
+    }
+
     setInput("");
     setLoading(true);
-
-    const res = await queryAI(input, token);
-
-    const aiMessage = {
-      role: "assistant",
-      content: res.response || "Sorry, I could not process that.",
-    };
-
-    setMessages((prev) => [...prev, aiMessage]);
-    setLoading(false);
   };
 
   const handleKeyDown = (e) => {
@@ -64,20 +83,20 @@ export default function Chat() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-      {/* Navbar */}
       <nav className="flex justify-between items-center px-8 py-5 border-b border-gray-800">
-        <div className="text-xl font-bold text-indigo-400">AI Assistant</div>
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard" className="text-gray-400 hover:text-white text-sm transition">
-            Back to Dashboard
-          </Link>
+        <div className="flex items-center gap-3">
+          <div className="text-xl font-bold text-indigo-400">AI Assistant</div>
+          <span className={`text-xs px-2 py-1 rounded-full ${connected ? "bg-green-900 text-green-300" : "bg-red-900 text-red-300"}`}>
+            {connected ? "● Live" : "○ Disconnected"}
+          </span>
         </div>
+        <Link href="/dashboard" className="text-gray-400 hover:text-white text-sm transition">
+          Back to Dashboard
+        </Link>
       </nav>
 
-      {/* Chat Container */}
       <div className="flex-1 max-w-3xl w-full mx-auto px-4 py-6 flex flex-col">
 
-        {/* Suggested Queries */}
         {messages.length === 1 && (
           <div className="mb-6">
             <p className="text-gray-400 text-sm mb-3">Suggested questions:</p>
@@ -95,20 +114,14 @@ export default function Chat() {
           </div>
         )}
 
-        {/* Messages */}
         <div className="flex-1 space-y-4 mb-4">
           {messages.map((msg, i) => (
-            <div
-              key={i}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-xl px-4 py-3 rounded-2xl text-sm leading-relaxed ${
-                  msg.role === "user"
-                    ? "bg-indigo-600 text-white rounded-br-sm"
-                    : "bg-gray-800 text-gray-100 rounded-bl-sm"
-                }`}
-              >
+            <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-xl px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                msg.role === "user"
+                  ? "bg-indigo-600 text-white rounded-br-sm"
+                  : "bg-gray-800 text-gray-100 rounded-bl-sm"
+              }`}>
                 {msg.role === "assistant" && (
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-indigo-400 text-xs font-bold">AI</span>
@@ -119,7 +132,6 @@ export default function Chat() {
             </div>
           ))}
 
-          {/* Loading indicator */}
           {loading && (
             <div className="flex justify-start">
               <div className="bg-gray-800 px-4 py-3 rounded-2xl rounded-bl-sm">
@@ -134,7 +146,6 @@ export default function Chat() {
           <div ref={bottomRef} />
         </div>
 
-        {/* Input */}
         <div className="flex gap-3 items-end">
           <textarea
             value={input}
@@ -146,7 +157,7 @@ export default function Chat() {
           />
           <button
             onClick={handleSend}
-            disabled={loading || !input.trim()}
+            disabled={loading || !input.trim() || !connected}
             className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 px-5 py-3 rounded-xl text-sm font-medium transition"
           >
             Send
