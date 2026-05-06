@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { getMe, getMyOrg, getSubscription, getNotifications, getUnreadCount, markNotificationsRead } from "../utils/api";
+import { getMe, getNotifications, markNotificationsRead, getPlatformSummary } from "../utils/api";
 import { connectWebSocket, disconnectWebSocket } from "../utils/websocket";
 
 export default function Dashboard() {
@@ -17,42 +17,43 @@ export default function Dashboard() {
     if (!token) { router.push("/login"); return; }
 
     async function loadData() {
-      const [userData, orgData, subData, notifData] = await Promise.all([
-        getMe(token),
-        getMyOrg(token),
-        getSubscription(token),
-        getNotifications(token),
-      ]);
+      try {
+        const [userData, summaryData, notifData] = await Promise.all([
+          getMe(token),
+          getPlatformSummary(token),
+          getNotifications(token),
+        ]);
 
-      if (userData.detail === "Invalid token") {
-        localStorage.removeItem("access_token");
-        router.push("/login");
-        return;
+        if (userData.detail === "Invalid token") {
+          localStorage.removeItem("access_token");
+          router.push("/login");
+          return;
+        }
+
+        setUser(userData);
+        setOrg({ name: summaryData.organization });
+        setSub({ plan: summaryData.plan });
+        setNotifications(notifData);
+        setLoading(false);
+
+        connectWebSocket(token, (event) => {
+          if (event.type !== "NOTIFICATION") {
+            setNotifications((prev) => [
+              {
+                id: Date.now(),
+                message: event.data.message,
+                event_type: event.type,
+                is_read: false,
+                created_at: new Date().toISOString(),
+              },
+              ...prev.slice(0, 9),
+            ]);
+          }
+        });
+      } catch (error) {
+        console.error("Failed to load dashboard:", error);
+        setLoading(false);
       }
-
-      setUser(userData);
-      setOrg(orgData);
-      setSub(subData);
-      setNotifications(notifData);
-      setLoading(false);
-
-      connectWebSocket(token, (event) => {
-        if (event.type !== "NOTIFICATION") {
-          setNotifications((prev) => [
-            {
-              id: Date.now(),
-              message: event.data.message,
-              event_type: event.type,
-              is_read: false,
-              created_at: new Date().toISOString(),
-            },
-            ...prev.slice(0, 9),
-          ]);
-        }
-        if (event.type === "SUBSCRIPTION_UPDATED") {
-          setSub((prev) => ({ ...prev, plan: event.data.message.split(" ")[3] }));
-        }
-      });
     }
 
     loadData();
@@ -88,7 +89,6 @@ export default function Dashboard() {
         <div className="text-xl font-bold text-indigo-400">{org?.name}</div>
         <div className="flex items-center gap-4">
           <span className="text-gray-400 text-sm">{user?.email}</span>
-
           <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
@@ -101,7 +101,6 @@ export default function Dashboard() {
                 </span>
               )}
             </button>
-
             {showNotifications && (
               <div className="absolute right-0 mt-2 w-80 bg-gray-900 border border-gray-700 rounded-xl shadow-xl z-50">
                 <div className="flex justify-between items-center px-4 py-3 border-b border-gray-700">
@@ -127,7 +126,6 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-
           <button onClick={handleLogout} className="border border-gray-700 hover:border-gray-500 px-4 py-2 rounded-lg text-sm transition">
             Logout
           </button>
