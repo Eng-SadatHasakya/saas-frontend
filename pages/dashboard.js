@@ -174,7 +174,7 @@ export default function Dashboard() {
             <a href="/chat" className="bg-indigo-700 hover:bg-indigo-600 border border-indigo-600 rounded-lg px-4 py-3 text-sm text-center">AI Assistant</a>
             <a href="http://localhost:8000/docs" target="_blank" rel="noreferrer" className="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg px-4 py-3 text-sm text-center">API Docs</a>
             <a href="#" className="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg px-4 py-3 text-sm text-center">Invite Member</a>
-            <a href="#" className="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg px-4 py-3 text-sm text-center">Manage Keys</a>
+            <a href="/billing" className="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg px-4 py-3 text-sm text-center">Billing</a>
           </div>
         </div>
       </div>
