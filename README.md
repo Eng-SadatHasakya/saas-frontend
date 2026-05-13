@@ -1,40 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# 🎨 SaaS Platform Frontend
 
-## Getting Started
+Modern Next.js frontend for the AI-powered multi-tenant SaaS platform.
 
-First, run the development server:
+## ✨ Features
+
+- 🔐 JWT Authentication (login, register, logout)
+- 📊 Real-time dashboard with WebSocket notifications
+- 🤖 AI chat interface with live responses
+- 💳 Stripe billing and plan management
+- 🔔 Live notification system
+- 📱 Responsive design with Tailwind CSS
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 16 |
+| Styling | Tailwind CSS |
+| Real-Time | WebSockets |
+| Payments | Stripe |
+
+## 🚀 Quick Start
 
 ```bash
+git clone https://github.com/Eng-SadatHasakya/saas-frontend.git
+cd saas-frontend
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit `http://localhost:3000`
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
+## 📄 Pages
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
+| Page | Description |
+|------|-------------|
+| / | Landing page |
+| /register | Create organization |
+| /login | Authentication |
+| /dashboard | Main dashboard |
+| /chat | AI assistant |
+| /billing | Subscription plans |
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+## 👤 Author
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Eng. Sadat Hasakya**
+- GitHub: [@Eng-SadatHasakya](https://github.com/Eng-SadatHasakya)
 
-## Learn More
+## 📄 License
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+MIT
